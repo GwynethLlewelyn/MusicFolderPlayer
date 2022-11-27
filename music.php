@@ -194,7 +194,7 @@ function return_zip($name, $paths, $pl)
 		foreach ($paths as $path) {
 			fwrite($list, $path . "\n");
 		}
-		$stdin = ["file", $list_path, "r"];
+		$stdin = ["file", $list_path, "r"];	// $stdin unused? (gwyneth 20221127)
 		$cmd = "zip - -0 " . ($pl ? "-j" : "-r") . " -@ <" . escapeshellarg($list_path);
 	}
 	if ($pl) {
