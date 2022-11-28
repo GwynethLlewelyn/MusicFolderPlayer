@@ -38,6 +38,9 @@ package-lock.json
 .eslintrc.yml
 .prettierrc.json
 
+# Skip my own local files
+index.html
+
 # Christan Schwarz original file from 2020
 
 /library
