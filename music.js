@@ -1563,7 +1563,7 @@ document.addEventListener(
 				mute(e);
 				break;
 			case "Delete": // Backspace
-			case DOM_VK_BACK_SPACE: // Firefox
+			// case DOM_VK_BACK_SPACE: // Firefox
 			case "MediaStop":
 				e.preventDefault();
 				stop();
@@ -1586,7 +1586,7 @@ document.addEventListener(
 			case tv ? "PageUp" : "": // PgUp
 			case "BracketLeft": // ]
 			// case 176: // MediaTrackNext (what key is this? (gwyneth 20221127))
-			case DOM_VK_TILDE: // Firefox for 176 (gwyneth 20221127)
+			// case DOM_VK_TILDE: // Firefox for 176 (gwyneth 20221127)
 				e.preventDefault(); // Necessary?
 				next();
 				break;
@@ -1717,3 +1717,4 @@ document.addEventListener(
 	},
 	false
 );
+
