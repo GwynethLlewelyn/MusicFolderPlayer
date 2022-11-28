@@ -1,7 +1,7 @@
 <?php
-$ini = parse_ini_file("music.defaults.ini", true, INI_SCANNER_TYPED);
+$ini = parse_ini_file("music.defaults.ini", true, INI_SCANNER_NORMAL);
 if (file_exists("music.ini")) {
-	$ini = ini_merge($ini, parse_ini_file("music.ini", true, INI_SCANNER_TYPED));
+	$ini = ini_merge($ini, parse_ini_file("music.ini", true, INI_SCANNER_NORMAL));
 }
 
 $cfg = $ini["server"];
@@ -224,4 +224,3 @@ function return_zip($name, $paths, $pl)
 	unlink($list_path);
 	exit();
 }
-
