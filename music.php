@@ -1,9 +1,14 @@
 <?php
-$ini = parse_ini_file("music.defaults.ini", true, INI_SCANNER_NORMAL);
+/**
+ *	@var array|false Array of all possible configuration prameters, from `music.defaults.ini`
+ *  as well as `music.ini`.
+ **/
+$ini = parse_ini_file("music.defaults.ini", true, INI_SCANNER_RAW);
 if (file_exists("music.ini")) {
-	$ini = ini_merge($ini, parse_ini_file("music.ini", true, INI_SCANNER_NORMAL));
+	$ini = ini_merge($ini, parse_ini_file("music.ini", true, INI_SCANNER_RAW));
 }
 
+/** @var array|mixed Configuration parameters for the `[server]` section in the INI files. */
 $cfg = $ini["server"];
 $ext = explode(",", $cfg["ext_songs"] . "," . $cfg["ext_images"]);
 $img = explode(",", $cfg["ext_images"]);
@@ -35,6 +40,7 @@ if (isset($_GET["dl"]) && !in_array("..", explode("/", $_GET["dl"]))) {
 	if (!file_exists($plfile)) {
 		die("Playlist not found: " . $plfile . PHP_EOL);
 	}
+	/** @var mixed Playlist object */
 	$pl = json_decode(json_decode(file_get_contents($plfile)));
 	if (is_object($pl)) {
 		$pl = $pl->playlist;
@@ -66,7 +72,7 @@ if (isset($_GET["dl"]) && !in_array("..", explode("/", $_GET["dl"]))) {
 	}
 	die(json_encode($playlists));
 }
-
+/** @var mixed Playlist object */
 $pl = json_decode(file_get_contents("php://input"), true);
 if (isset($pl["name"])) {
 	if ($_SERVER["REQUEST_METHOD"] == "DELETE") {
@@ -115,6 +121,7 @@ if (isset($_GET["play"]) && !in_array("..", explode("/", $_GET["play"]))) {
 	}
 }
 
+/** @var string Path to music library (a JSON file) */
 $lib_path = $cfg["playlistdir"] . "/library.json";
 if (!$cfg["cache"] || isset($_GET["play"]) || isset($_GET["reload"]) || !file_exists($lib_path)) {
 	$lib = json_encode(tree($dir, 0));
