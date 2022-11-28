@@ -1,3 +1,8 @@
+/**
+ * MusicFolderPlayer - music.js
+ * @author ltGuillaume
+ * @license GPLv3
+ */
 var audio,
 	base,
 	cfg = {},
@@ -25,7 +30,7 @@ var audio,
 	touch,
 	track = 0,
 	tree,
-	tv;
+	tv;	/** I wish I knew what this is... */
 
 const ADD = 1,
 	TOG = 0.1,
@@ -655,18 +660,40 @@ function fillShare(path) {
 	}
 }
 
+/**
+ *  Probably a legacy function for escaping characters the old way.
+ *
+ *	@param {string} s String to be escaped
+ *	@return {string} Escaped string
+ *
+ **/
 function esc(s) {
 	return s.replace(/\/+$/, "").replace(/[(\?=&#% ]/g, function (char) {
+		// @deprecated
 		return escape(char);
 	});
 }
 
+/**
+ *  Probably _another_ legacy function for converting a string into its
+ *		Base64-encoded equivalent.
+ *
+ *	@param {string} s String to be encoded using Base64
+ *	@returns {string} Base64-encoded string
+ *
+ **/
 function escBase64(s) {
 	return s.replace(/=+$/, "").replace(/[\/+=]/g, function (char) {
+		// @deprecated
 		return escape(char);
 	});
 }
 
+/**
+ * Retrieves the song info from a file.
+ * @param {string} path - Path to music file
+ * @return {Object<string>} Object with artist and album as keys
+ */
 function getSongInfo(path) {
 	log("getSongInfo: " + path);
 	if (path.indexOf("/") == -1 && url.length > 1) path = root + path; // For shared songs/folders
@@ -695,6 +722,12 @@ function getSongInfo(path) {
 	}
 }
 
+/**
+ * Retrieves the album info from a file.
+ * It's the opposite of {@function getSongInfo}
+ * @param {Object<string>} nfo - Object with artist, album and year as keys
+ * @return {string} String
+ */
 function getAlbumInfo(nfo) {
 	var artist = nfo.artist ? nfo.artist : "";
 	var album = (nfo.year ? "(" + nfo.year + ") " : "") + (nfo.album || "");
@@ -710,6 +743,10 @@ function timeTxt(t) {
 	return (h > 0 ? (h < 10 ? "0" : "") + h + ":" : "") + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
 }
 
+/**
+ * Handle zoom
+ * @return void
+ */
 function zoom() {
 	if (window.pageYOffset > 2 * dom.player.offsetHeight) return window.scrollTo({ top: 0, behavior: "smooth" });
 	dom.player.className = cls(dom.player, "big") ? "full" : cls(dom.player, "full") ? "" : "big";
@@ -881,8 +918,14 @@ function clip(type) {
 		var clearVal = share.value;
 		if (type == "playlist") share.value = base + "?play=pl:" + esc(share.value);
 		else share.value = base + "?play=c:" + escBase64(btoa(root + share.value));
-		share.select();
-		document.execCommand("copy");
+		if (!navigator.clipboard) {
+			// deprecated code for old browsers (gwyneth 20221127)
+			share.select();
+			document.execCommand("copy");
+		} else {
+			// all current browsers (in 2022) should work with this instead
+			navigator.clipboard.writeText(share.select());
+		}
 		cls(share.nextElementSibling.nextElementSibling, "clip", ADD);
 		share.blur();
 		share.value = clearVal;
@@ -1043,7 +1086,8 @@ function add(id, next = false) {
 	if (next) {
 		s.playNext = 1;
 		cfg.playlist.splice(i, 0, s);
-		playlist.insertBefore(li, dom.playlist.childNodes[i]);
+		// playlist.insertBefore(li, dom.playlist.childNodes[i]);
+		playlists.insertBefore(li, dom.playlist.childNodes[i]);	// probably what was intended? (gwyneth 20221127)
 	} else {
 		cfg.playlist.push(s);
 		dom.playlist.appendChild(li);
@@ -1445,26 +1489,27 @@ document.addEventListener(
 		var el = document.activeElement;
 		if (e.altKey || e.ctrlKey) return;
 
-		if (e.keyCode == 27) {
+		if (e.key === "Escape") {
 			// Esc
 			if (!cls(dom.popupdiv, "hide")) return Popup.close();
 			if (el == dom.log && !cls(dom.logdiv, "hide")) return logbtn.click();
 		}
 
 		if (el.tagName == "INPUT") {
-			if (el == dom.volumeslider && e.keyCode > 36 && e.keyCode < 41)
+			if (el == dom.volumeslider &&
+				["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(e.code))
 				// Arrow keys
 				return;
 			if (el == dom.filter)
-				switch (e.keyCode) {
-					case 38:
+				switch (e.key) {
+					case "ArrowUp":
 						return keyNav(null, "up"); // ArrowUp
-					case 40:
+					case "ArrowDown":
 						return keyNav(null, "down"); // ArrowDown
 				}
 
 			var refocus = true;
-			if (e.keyCode == 27) {
+			if (e.key === "Escape") {
 				// Esc
 				e.preventDefault();
 				if (el.value == "") refocus = false;
@@ -1478,171 +1523,177 @@ document.addEventListener(
 
 		if (el.tagName == "TEXTAREA") return;
 
-		switch (e.keyCode) {
-			case 116: // F5
+		switch (e.key) {
+			case "F5": // F5
 				if (cfg.locked) return;
 				e.preventDefault();
 				reloadLibrary();
 				break;
-			case 27: // Esc
+			case "Escape": // Esc
 				if (el && cls(el.parentNode, "menu") && cls(dom.options, "playlistbtn")) dom.playlistbtn.click();
 				else clearFilter();
 				break;
-			case tv ? 51 : "": // 3
-			case 90: // Z
+			case tv ? "Digit3" : "": // 3
+			case "KeyZ"	: // Z
 				zoom();
 				break;
-			case 61: // = Firefox
-			case 187: // =
+			// case 61: // = Firefox
+			// case 187: // =
+			case "Equal":
 				e.preventDefault();
 				if (e.shiftKey) setVolume(Math.min(cfg.volume + 0.05, def.volume));
 				else audio[track].currentTime += 5;
 				break;
-			case 173: // - Firefox
-			case 189: // -
+			// case 173: // - Firefox
+			// case 189: // -
+			case "Minus":
 				e.preventDefault();
 				if (e.shiftKey) setVolume(Math.max(cfg.volume - 0.05, 0));
 				else audio[track].currentTime -= 5;
 				break;
-			case 85: // U
+			case "KeyU": // U
 				if (el == dom.volumeslider) dom.hide("volumeslider");
 				else {
 					dom.show("volumeslider");
 					setFocus(dom.volumeslider);
 				}
 				break;
-			case 77: // M
+			case "KeyM": // M
 				e.preventDefault();
 				mute(e);
 				break;
-			case 8: // Backspace
+			case "Delete": // Backspace
+			case DOM_VK_BACK_SPACE: // Firefox
 			case "MediaStop":
 				e.preventDefault();
 				stop();
 				break;
-			case tv ? 48 : "": // 0
-			case 32: // Space
-			case 179: // MediaPlayPause
+			case tv ? "Key0" : "": // 0
+			case "Space": // Space
+			// case 179: // MediaPlayPause (what key is this? (gwyneth 20221127))
+			case "Pause":
+			case "F15": // Mac for pause
 				e.preventDefault();
 				if (!dom.tree.contains(e.target)) e.target.blur();
 				playPause();
 				break;
-			case tv ? 34 : "": // PgDn
-			case 219: // [
-			case 177: // MediaTrackPrevious
+			case tv ? "PageDown": "": // PgDn
+			case "BracketRight": // [
+			// case 177: // MediaTrackPrevious (what key is this? (gwyneth 20221127))
 				e.preventDefault(); // Necessary?
 				previous();
 				break;
-			case tv ? 33 : "": // PgUp
-			case 221: // ]
-			case 176: // MediaTrackNext
+			case tv ? "PageUp" : "": // PgUp
+			case "BracketLeft": // ]
+			// case 176: // MediaTrackNext (what key is this? (gwyneth 20221127))
+			case DOM_VK_TILDE: // Firefox for 176 (gwyneth 20221127)
 				e.preventDefault(); // Necessary?
 				next();
 				break;
-			case 75: // K
+			case "KeyK": // K
 				skipArtist(e);
 				break;
-			case tv ? 49 : "": // 1
-			case 69: // E
+			case tv ? "Digit1" : "": // 1
+			case "KeyE": // E
 				dom.enqueue.click();
 				setToast(dom.enqueue);
 				break;
-			case 82: // R
+			case "KeyR": // R
 				dom.random.click();
 				setToast(dom.random);
 				break;
-			case 79: // O
+			case "KeyO": // O
 				dom.crossfade.click();
 				setToast(dom.crossfade);
 				break;
-			case 80: // P
+			case "KeyP": // P
 				dom.playlistbtn.click();
 				break;
-			case tv ? 55 : "": // 7
-			case 68: // D
+			case tv ? "Key7" : "": // 7
+			case "KeyD": // D
 				if (cfg.locked || !onlinepls || url.length > 1) return;
 				menu("load");
 				break;
-			case 86: // V
+			case "KeyV": // V
 				if (cfg.locked || !onlinepls || url.length > 1) return;
 				prepPlaylists("save");
 				break;
-			case 73: // I
+			case "KeyI": // I
 				if (cfg.locked || mode == "song") return;
 				importPlaylist();
 				break;
-			case 88: // X
+			case "KeyX": // X
 				if (cfg.locked || mode == "song") return;
 				exportPlaylist();
 				break;
-			case 65: // A
+			case "KeyA": // A
 				if (cfg.locked) return;
 				menu("after");
 				break;
-			case 83: // S
+			case "KeyS": // S
 				if (!sharing) return;
 				dom.share.click();
 				setFocus(dom.share);
 				break;
-			case 76: // L
+			case "KeyL": // L
 				dom.lock.click();
 				break;
-			case 71: // G
+			case "KeyG": // G
 				e.preventDefault();
 				dom.logbtn.click();
 				break;
-			case 67: // C
+			case "KeyC": // C
 				if (!cfg.locked && !mode && confirm(s_clearplaylist)) clearPlaylist();
 				break;
-			case 70: // F
+			case "KeyF": // F
 				e.preventDefault();
 				setFocus(dom.filter);
 				if (dom.filter.value != "") dom.filter.select();
 				break;
-			case 84: // T
+			case "KeyT": // T
 				if (e.shiftKey) return changeTheme();
 				if (cfg.locked || mode) return;
 				e.preventDefault();
 				dom.unfold.click();
 				break;
-			case 36: // Home
+			case "Home": // Home
 				e.preventDefault();
 				keyNav(null, "down");
 				break;
-			case 35: // End
+			case "End": // End
 				e.preventDefault();
 				keyNav(null, "up");
 				break;
-			case tv ? 50 : "": // 2
-			case 38: // ArrowUp
+			case tv ? "Key2" : "": // 2
+			case "ArrowUp": // ArrowUp
 				e.preventDefault();
 				if (e.shiftKey) keyNav(el, "first");
 				else keyNav(el, "up");
 				break;
-			case tv ? 56 : "": // 8
-			case 40: // ArrowDown
+			case tv ? "Key8" : "": // 8
+			case "ArrowDown": // ArrowDown
 				e.preventDefault();
 				if (e.shiftKey) keyNav(el, "last");
 				else keyNav(el, "down");
 				break;
-			case tv ? 52 : "": // 4
-			case 37: // ArrowLeft
+			case tv ? "Key4" : "": // 4
+			case "ArrowLeft": // ArrowLeft
 				e.preventDefault();
 				keyNav(el, "left");
 				break;
-			case tv ? 54 : "": // 6
-			case 39: // ArrowRight
+			case tv ? "Key6" : "": // 6
+			case "ArrowRight": // ArrowRight
 				e.preventDefault();
 				keyNav(el, "right");
 				break;
-			case tv ? 53 : "": // 5
-			case 13: // Enter
+			case tv ? "Key5" : "": // 5
+			case "Enter": // Enter
 				e.preventDefault();
 				if (e.shiftKey) el.dispatchEvent(new CustomEvent("contextmenu", { bubbles: true }));
 				else el.click();
 				break;
-			case tv ? 57 : "": // 9
-			case 66: // B
+			case tv ? "Key9" : "": // 9
+			case "KeyB": // B
 				cls(dom.doc, "dim", TOG);
 				break;
 			default:
