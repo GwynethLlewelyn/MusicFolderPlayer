@@ -45,6 +45,7 @@ function init() {
 	var get = function (id) {
 		return document.getElementById(id);
 	};
+	if (debug) console.log("Retrieved element by ID: '" + get + "'");
 	dom = {
 		hide: function (el) {
 			dom.show(el, false);
@@ -732,7 +733,7 @@ function getAlbumInfo(nfo) {
 	var artist = nfo.artist ? nfo.artist : "";
 	var album = (nfo.year ? "(" + nfo.year + ") " : "") + (nfo.album || "");
 	album = artist + (album.length > 1 ? " - " + album : "");
-	log("getAlbumInfo: " + album);
+	if (debug) log("getAlbumInfo: " + album);
 	return album;
 }
 
@@ -1486,8 +1487,13 @@ function changeTheme() {
 document.addEventListener(
 	"keydown",
 	function (e) {
+		// ignore events for alt & ctrl, as well as the 'new' events fired by
+		// multiple combinations of keys, e.g. accented characters or
+		// composing ideograms using CKJT keyboards (gwyneth 20221128)
+		if (e.altKey || e.ctrlKey || e.isComposing) return;
 		var el = document.activeElement;
-		if (e.altKey || e.ctrlKey) return;
+
+		if (debug) console.log("Key event: got key '" + e.key + "' with code '" + e.code + "'");
 
 		if (e.key === "Escape") {
 			// Esc
@@ -1569,8 +1575,9 @@ document.addEventListener(
 				stop();
 				break;
 			case tv ? "Key0" : "": // 0
-			case "Space": // Space
-			// case 179: // MediaPlayPause (what key is this? (gwyneth 20221127))
+			case "Space": // Space"
+			case " ":	// seems to be the contemporary approach (gwyneth 20221128)
+			// case 179: // MediaPlayPause
 			case "Pause":
 			case "F15": // Mac for pause
 				e.preventDefault();
@@ -1696,7 +1703,18 @@ document.addEventListener(
 			case "KeyB": // B
 				cls(dom.doc, "dim", TOG);
 				break;
+			case "MediaPlayPause":
+				e.preventDefault();
+				playPause();
+				break;
+			case "MediaTrackPrevious":
+				previous();
+				break;
+			case "MediaTrackNext":
+				next();
+				break;
 			default:
+				// if couldn't get it via a e.key, try e.code instead
 				switch (e.code) {
 					case "MediaStop":
 						stop();
