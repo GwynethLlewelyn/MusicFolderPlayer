@@ -2,41 +2,47 @@
  * MusicFolderPlayer - music.js
  * @author ltGuillaume
  * @license GPLv3
+ * @url https://github.com/ltGuillaume/MusicFolderPlayer/
  */
-var audio,
-	base,
-	cfg = {},
-	def = { playlist: [], skip: [], index: -1 },
-	dom,
-	library,
-	ls,
-	pathexp,
-	songs = [],
-	themes = [],
-	url,
-	drag,
-	errorcount = 0,
-	filteredsongs = [],
-	mode,
-	onplaylist,
-	onseek,
-	onscrollwait,
-	played = [],
-	playerheight,
-	playlistloaded,
-	playlists,
-	retry,
-	toast,
-	touch,
-	track = 0,
-	tree,
-	tv;	/** I wish I knew what this is... */
+
+/** @global */
+var audio,		/** @global */
+	base,		/** @global */
+	cfg = {},	/** @global {object} */
+	def = { playlist: [], skip: [], index: -1 },	/** @global {object} */
+	dom,		/** @global */
+	library,	/** @global */
+	ls,			/** @global */
+	pathexp,	/** @global */
+	songs = [],	/** @global {array} */
+	themes = [],/** @global {array} */
+	url,		/** @global {string} */
+	drag,		/** @global */
+	errorcount = 0,		/** @global {number} */
+	filteredsongs = [],	/** @global {array} */
+	mode,		/** @global */
+	onplaylist,	/** @global */
+	onseek,		/** @global */
+	onscrollwait,		/** @global */
+	played = [],		/** @global {array} */
+	playerheight,		/** @global */
+	playlistloaded,		/** @global */
+	playlists,	/** @global */
+	retry,		/** @global */
+	toast,		/** @global */
+	touch,		/** @global {boolean} */
+	track = 0,	/** @global {number} */
+	tree,		/** @global */
+	tv;			/** @global I wish I knew what this is... */
 
 const ADD = 1,
 	TOG = 0.1,
 	REM = 0,
 	SET = 2;
 
+/**
+ * Everything starts here.
+ */
 function init() {
 	url = document.URL.split("?play=", 2);
 	if (url[1] && url[1].startsWith("c:")) url[1] = atob(decodeURIComponent(url[1].substring(2)));
@@ -45,7 +51,18 @@ function init() {
 	var get = function (id) {
 		return document.getElementById(id);
 	};
-	if (debug) console.log("Retrieved element by ID: '" + get + "'");
+	// Under Google Chrome, undefined variables throw errors and stop the script.
+	// 'debug' will only be set after the .INI files are read, so it might be undefined here
+	// So we try to catch an error and define debug as false; later, it might be
+	// correctly overwritten with the values of the .INI files. (gwyneth 20221207)
+	try {
+		if (debug) console.log("Retrieved element by ID: '" + get + "'");
+	} catch(e) {
+		debug = false;
+		console.log("Variable 'debug' is as yet undefined; defining it now as false. Event error was: " + e.Error);
+		console.log("Retrieved element by ID: '" + get + "'");
+	}
+
 	dom = {
 		hide: function (el) {
 			dom.show(el, false);
@@ -131,7 +148,8 @@ function prepUI() {
 					"touchend",
 					function (e) {
 						e.preventDefault();
-						/*			dom.playlist.className = dom.playlist.style.height = '';
+/*
+			dom.playlist.className = dom.playlist.style.height = '';
 			resizePlaylist();
 			window.addEventListener('touchend', function(e) {
 				endDrag();
@@ -208,6 +226,12 @@ function fixPlayer() {
 	}
 }
 
+/**
+ * Function for dealing with the browser local storage.
+ *
+ * @param {void}
+ * @returns {boolean} - `false` if something seriously goes wrong, `true` otherwise.
+ */
 function ls() {
 	if (url.length > 1) {
 		// Don't use saved options & playlist when not in main library
@@ -236,6 +260,13 @@ function ls() {
 	}
 }
 
+/**
+ * Internal logging system; if we have a valid console, also logs the message time.
+ * @param {any} s - Either a string (will get the time prepended) or an object,
+ * which will go straight to the console.
+ * @param {boolean} force - true if the message has to go out, no matter what `debug` says.
+ * @returns {void}
+ */
 function log(s, force = false) {
 	if (debug || force) {
 		if (typeof s === "string") {
