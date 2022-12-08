@@ -733,7 +733,8 @@ function getSongInfo(path) {
 	for (var i = pathexp.length - 1; i > -1; i--) {
 		try {
 			var nfo = path.match(pathexp[i]);
-			log(nfo.groups);
+//			log(nfo.groups);
+			log("nfo: " + nfo + "groups: " + nfo.groups);
 			return nfo.groups;
 		} catch (e) {
 			log(e);
