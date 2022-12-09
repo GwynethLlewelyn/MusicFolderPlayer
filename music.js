@@ -3,37 +3,65 @@
  * @author ltGuillaume
  * @license GPLv3
  * @url https://github.com/ltGuillaume/MusicFolderPlayer/
- */
+ **/
 
-/** @global */
-var audio,		/** @global */
-	base,		/** @global */
-	cfg = {},	/** @global {object} */
-	def = { playlist: [], skip: [], index: -1 },	/** @global {object} */
-	dom,		/** @global */
-	library,	/** @global */
-	ls,			/** @global */
-	pathexp,	/** @global */
-	songs = [],	/** @global {array} */
-	themes = [],/** @global {array} */
-	url,		/** @global {string} */
-	drag,		/** @global */
-	errorcount = 0,		/** @global {number} */
-	filteredsongs = [],	/** @global {array} */
-	mode,		/** @global */
-	onplaylist,	/** @global */
-	onseek,		/** @global */
-	onscrollwait,		/** @global */
-	played = [],		/** @global {array} */
-	playerheight,		/** @global */
-	playlistloaded,		/** @global */
-	playlists,	/** @global */
-	retry,		/** @global */
-	toast,		/** @global */
-	touch,		/** @global {boolean} */
-	track = 0,	/** @global {number} */
-	tree,		/** @global */
-	tv;			/** @global I wish I knew what this is... */
+/** Global variables */
+var /** @global */
+	audio,
+	/** @global @type {string} Base URL for the music.htm */
+	base,
+	/** @global @type {object} Configuration extracted from `.ini` files */
+	cfg = {},
+	/** @global @type {{playlist: array, skip:array, index:number}} */
+	def = { playlist: [], skip: [], index: -1 },
+	/** @global */
+	dom,
+	/** @global */
+	library,
+	/** @global Local Storage */
+	ls,
+	/** @global */
+	pathexp,
+	/** @global @type {array} */
+	songs = [],
+	/** @global @type {array} */
+	themes = [],
+	/** @global @type {array} URL of the base HTML split by the `play` query (if present). */
+	url,
+	/** @global */
+	drag,
+	/** @global @type {number} */
+	errorcount = 0,
+	/** @global @type {array} */
+	filteredsongs = [],
+	/** @global @type {?string} Can be set to `"playlist"`|`"song"`|`null` */
+	mode,
+	/** @global */
+	onplaylist,
+	/** @global */
+	onseek,
+	/** @global @type {boolean} */
+	onscrollwait,
+	/** @global @type {array} */
+	played = [],
+	/** @global */
+	playerheight,
+	/** @global */
+	playlistloaded,
+	/** @global */
+	playlists,
+	/** @global */
+	retry,
+	/** @global */
+	toast,
+	/** @global @type {boolean} Does this device have a touchscreen? */
+	touch,
+	/** @global @type {number} */
+	track = 0,
+	/** @global */
+	tree,
+	/** @global I wish I knew what this is... */
+	tv;
 
 const ADD = 1,
 	TOG = 0.1,
@@ -149,11 +177,11 @@ function prepUI() {
 					function (e) {
 						e.preventDefault();
 /*
-			dom.playlist.className = dom.playlist.style.height = '';
-			resizePlaylist();
-			window.addEventListener('touchend', function(e) {
-				endDrag();
-			}, false);
+						dom.playlist.className = dom.playlist.style.height = '';
+						resizePlaylist();
+						window.addEventListener('touchend', function(e) {
+							endDrag();
+						}, false);
 */
 					},
 					{ once: true }
