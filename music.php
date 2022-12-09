@@ -97,6 +97,10 @@ if (!isset($_GET["reload"])) {
 	foreach ($ini["client"] as $key => $value) {
 		echo (stristr($key, ".") ? "" : "var ") . $key . "=" . $value . ";" . PHP_EOL;
 	};
+	// do the same for streamer INI config (gwyneth 20221208)
+	foreach ($ini["streamer"] as $key => $value) {
+		echo (stristr($key, ".") ? "" : "var ") . $key . "=" . $value . ";" . PHP_EOL;
+	};
 }
 
 $dir = $cfg["root"];
