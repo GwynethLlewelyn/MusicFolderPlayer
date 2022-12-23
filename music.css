@@ -929,3 +929,10 @@ button.on:before {
 button.whatsapp:before {
 	content: "\f1a6";
 }
+/* Added by gwynethllewelyn (20221222) */
+#on-air {
+	color: var(--focus);
+}
+#on-air.dim {
+	color: var(--bg);
+}

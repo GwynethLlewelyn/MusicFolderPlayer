@@ -65,7 +65,7 @@ var /** @global */
 
 const ADD = 1,
 	TOG = 0.1,
-	REM = 0,
+	REM = 0,	// remove
 	SET = 2;
 
 /**
@@ -1388,8 +1388,13 @@ function resizePlaylist() {
 	dom.trash.style.right = scrollBars == 0 ? "" : scrollBars + 4 + "px";
 }
 
+/**
+ * Filters names/albums by keyword/part of word.
+ *
+ * @param {boolean} instant - apply filter instantaneously? (default is false)
+ */
 function filter(instant = false) {
-	// Gets event from oninput
+	// Gets event from oninput.
 	if (instant && dom.filter.value.length < instantfilter) return;
 	var clear = dom.filter.value == "" ? "" : "none";
 	if (!tree) tree = dom.tree.querySelectorAll("li");
@@ -1460,6 +1465,15 @@ function setFilter(f) {
 function clearFilter() {
 	dom.filter.value = "";
 	filter();
+}
+
+/**
+ * Toggle a message saying that the streamer is configured.
+ */
+function onAir() {
+	if (push_to_streamer == true) {
+
+	}
 }
 
 function keyNav(el, direction) {
