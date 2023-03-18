@@ -918,7 +918,12 @@ function artistSkipped(path) {
 	if (debug && cfg.skip.indexOf() != -1) log("Artist " + artist + " skipped");
 	return cfg.skip.indexOf(artist) != -1;
 }
-
+/**
+ * Loads/adds a song from/to a playlist (?)
+ *
+ * @param {type} id - song ID
+ * @param {boolean} addtoplaylist - if set to true, add this song to (a) playlist
+ */
 function load(id, addtoplaylist = false) {
 	log("load(" + id + ", addtoplaylist = " + addtoplaylist + ")");
 	clearInterval(retry);
@@ -945,6 +950,11 @@ function load(id, addtoplaylist = false) {
 	}, 2500);
 }
 
+/**
+ * Plays a song, given its id.
+ * @param {type} id - description
+ * @returns {void} - nothing is returned
+ */
 function play(id) {
 	load(id);
 	stop();
@@ -1162,6 +1172,12 @@ function add(id, next = false) {
 	}
 }
 
+/**
+ * Main function to start playing a song (either directly or from a playlist).
+ *
+ * @param {void}
+ * @returns {void} returns void
+ */
 function playNext() {
 	if (cfg.index != -1) {
 		var li = dom.playlist.childNodes[cfg.index];
