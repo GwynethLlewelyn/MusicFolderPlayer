@@ -1,6 +1,9 @@
 <?php
+// avoid escapeshellcmd() problems with PHP using ASCII
+setlocale(LC_CTYPE, "en_US.UTF-8");
+
 /**
- *	@var array|false Array of all possible configuration prameters, from `music.defaults.ini`
+ *	@var array|false Array of all possible configuration parameters, from `music.defaults.ini`
  *  as well as `music.ini`.
  **/
 $ini = parse_ini_file("music.defaults.ini", true, INI_SCANNER_RAW);
@@ -93,6 +96,64 @@ if (isset($pl["name"])) {
 	die(file_put_contents($name, json_encode($pl["songs"])));
 }
 
+// handle request for streaming (gwyneth 20230416)
+if (isset($_GET["stream"])) {
+	if (!empty($cfg["streamer_command"]) && isset($pl["music"])) {
+		// POST body has a JSON with the song name (hopefully) (gwyneth 20230416)
+		$path = $cfg["root"] . "/" . $pl["music"];
+		if (!file_exists($path)) {
+			die("Song not found: " . $path . PHP_EOL);
+		}
+		$rawStreamerCommand = $cfg["streamer_command"];
+		// Parse special variables inside the command.
+		// Use escapeshellcmd() on the replacements, just because who knows what users may
+		// creatively pass (deliberately or not!) to ffmpeg... (gwyneth 20230417)
+		$streamerCommand = str_replace("%filename%", escapeshellcmd($path), $rawStreamerCommand);
+		$streamerCommand = str_replace("%streaming_protocol%", escapeshellcmd($cfg["streaming_protocol"]), $streamerCommand);
+		$streamerCommand = str_replace("%streamer_url%", escapeshellcmd($cfg["streamer_url"]), $streamerCommand);
+		error_log("[INFO] mfp: launching streamer for <" . $streamerCommand . ">", 4);
+		// `nohup` will launch ffmpeg in the background, so as not to interrupt the web server.
+		// stderr and stdout will get redirected to /dev/null
+		// `printf $!` will echo the PID of the spawned process (using `echo` seems to be problematic under
+		//  some Linux implementations)
+		// Finally, with luck, we'll even get a result code!
+		try {
+			/** @var int Result code from spawned process; usually, 0 means okay */
+			$resCode = -1;
+			/** @var int Spawned process ID. Assigned here to fix scope issues below. */
+			$pid = -1;
+			/** @var {array.<string>} Output from command, captured in an array of lines. */
+			$op = array();
+			/** @var string|false Last outputted line from the spawned `ffmpeg` (false if spawn failed) */
+			$output = exec('nohup ' . $streamerCommand . ' > /dev/null 2>&1 & printf $!', $op, $resCode);
+			if ($output === false) {
+				error_log("[WARN] mfp: no output from spawn, no way to know if it succeeded");
+				die("Unknown error");
+			}
+			/** @var integer Process ID from the nohup'd `exec()` call */
+			if (!empty($op) && is_array($op)) {
+				$pid = (int)$op[0];
+				// Note: $pid should be the same as $output, if $output !== false)
+			}
+			if ($pid < 0 || $resCode > 0) {
+				// something failed which we didn't manage to catch!
+				error_log(sprintf("[ERRO] mfp: spawning `ffmpeg`: unknown error, PID was %d, returning code was %d, last line of output was '%s'", $pid, ), 4);
+				die("Confusing error; see server logs");
+			}
+		} catch (Exception $e) {
+			error_log("[ERRO] mfp: spawning `ffmpeg` caused exception: " . $e->getMessage(), 4);
+			die("Spawning `ffmpeg` caused exception: " . $e->getMessage() . PHP_EOL);
+		}
+		if ($output === FALSE) {
+			die("Spawning `ffmpeg` failed miserably; reason unknown!" . PHP_EOL);
+		}
+		die("Sending '" + $pl["music"] + "' to streamer");
+	} else {
+		// no streamer configured, but nevertheless a command was sent to stream?
+		die("No streamer configured or music file not found");
+	}
+}
+
 if (!isset($_GET["reload"])) {
 	foreach ($ini["client"] as $key => $value) {
 		echo (stristr($key, ".") ? "" : "var ") . $key . "=" . $value . ";" . PHP_EOL;
@@ -141,6 +202,17 @@ if (!$cfg["cache"] || isset($_GET["play"]) || isset($_GET["reload"]) || !file_ex
 
 echo 'var root="' . $dir . '/";' . PHP_EOL . "var library=" . $lib;
 
+/**
+ * Merge two lists of parameters set in `.INI` files.
+ * This is used to begin with the `music.defaults.ini` parameter set,
+ * and allow users to override them with their own parameters instead.
+ * Handles sets of sets (applying itself recursively).
+ *
+ * @param  string[]       $ini Base set of parameters
+ * @param  mixed|string[] $usr Additional sets of parameters (works recursively)
+ *
+ * @return string[] Array of merged parameters
+ */
 function ini_merge($ini, $usr)
 {
 	foreach ($usr as $k => $v) {
@@ -153,6 +225,15 @@ function ini_merge($ini, $usr)
 	return $ini;
 }
 
+/**
+ * Generates a listing of folders and files in them,
+ * respecting the configured valid extensions.
+ *
+ * @param  string  $dir   Directory name to search for.
+ * @param  integer $depth How deep to go inside the directory tree.
+ *
+ * @return mixed|boolean  May return an array of arrays (directories and subfolders) or `false` if nothing found.
+ */
 function tree($dir, $depth)
 {
 	$scan = scandir($dir);

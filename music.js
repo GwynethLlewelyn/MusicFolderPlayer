@@ -63,6 +63,7 @@ var /** @global */
 	/** @global I wish I knew what this is... */
 	tv;
 
+/** @const */
 const ADD = 1,
 	TOG = 0.1,
 	REM = 0,	// remove
@@ -73,21 +74,21 @@ const ADD = 1,
  */
 function init() {
 	url = document.URL.split("?play=", 2);
-	if (url[1] && url[1].startsWith("c:")) url[1] = atob(decodeURIComponent(url[1].substring(2)));
+	if (url[1] && url[1].startsWith("c:")) url[1] = window.atob(decodeURIComponent(url[1].substring(2)));
 	base = window.location.protocol + "//" + window.location.host + window.location.pathname;
 
 	var get = function (id) {
 		return document.getElementById(id);
 	};
 	// Under Google Chrome, undefined variables throw errors and stop the script.
-	// 'debug' will only be set after the .INI files are read, so it might be undefined here
+	// `debug` will only be set after the `.INI` files are read, so it might be undefined here
 	// So we try to catch an error and define debug as false; later, it might be
 	// correctly overwritten with the values of the .INI files. (gwyneth 20221207)
 	try {
 		if (debug) console.log("Retrieved element by ID: '" + get + "'");
 	} catch(e) {
 		debug = false;
-		console.log("Variable 'debug' is as yet undefined; defining it now as false. Event error was: " + e.Error);
+		console.log("Variable 'debug' is as yet undefined; defining it now as 'false'. Event error was: " + e.Error);
 		console.log("Retrieved element by ID: '" + get + "'");
 	}
 
@@ -255,10 +256,10 @@ function fixPlayer() {
 }
 
 /**
- * Function for dealing with the browser local storage.
+ * Function for dealing with the browser's local storage.
  *
  * @param {void}
- * @returns {boolean} - `false` if something seriously goes wrong, `true` otherwise.
+ * @returns {boolean} `false` if something seriously goes wrong, `true` otherwise.
  */
 function ls() {
 	if (url.length > 1) {
@@ -287,12 +288,11 @@ function ls() {
 		return false;
 	}
 }
-
 /**
  * Internal logging system; if we have a valid console, also logs the message time.
- * @param {any} s - Either a string (will get the time prepended) or an object,
+ * @param {(string|any)} s Either a string (will get the time prepended) or an object,
  * which will go straight to the console.
- * @param {boolean} force - true if the message has to go out, no matter what `debug` says.
+ * @param {boolean} force `true` if the message has to go out, no matter what `debug` says.
  * @returns {void}
  */
 function log(s, force = false) {
@@ -312,7 +312,10 @@ function log(s, force = false) {
 		if (!touch) console.log(s);
 	}
 }
-
+/**
+ * Saves the internal log to a file, opening a dialogue box.
+ * @returns {void}
+ */
 function saveLog() {
 	var l = new Blob([dom.log.value], { type: "text/plain", endings: "native" });
 	dom.a.href = window.URL.createObjectURL(l);
@@ -358,7 +361,7 @@ function prepAudio(id) {
 		a.log("Playing");
 	};
 
-	a.onpause = function (e) {
+	a.onpause = function (_) {
 		a.log("Pause");
 		if (a == audio[track]) {
 			cls(dom.playpause, "playing", REM);
@@ -580,7 +583,10 @@ function addSongNext(e) {
 	cls(li, "dim", ADD);
 	if (audio[track].paused) fillShare(li.path);
 }
-
+/**
+ * Assembles the playlist from the current choices.
+ * @returns {void}
+ */
 function buildPlaylist() {
 	if (cfg.playlist.length == 0 || (url.length > 1 && !mode)) return; // Only use saved playlist in library mode
 	cfg.index = Math.min(cfg.index, cfg.playlist.length - 1);
@@ -594,6 +600,7 @@ function buildPlaylist() {
 		if (i == cfg.index) {
 			cls(li, "playing", ADD);
 			var path = cfg.playlist[i].path;
+			/** @type {Object<string>} Object with artist, album and year as keys */
 			var nfo = getSongInfo(path);
 			dom.album.innerHTML = getAlbumInfo(nfo);
 			dom.title.innerHTML = nfo.title;
@@ -607,7 +614,11 @@ function buildPlaylist() {
 		fillShare(cfg.playlist[cfg.index].path);
 	}
 }
-
+/**
+ * Adds one item to the list of songs to play
+ * @param {any} s - A song name (possibly a snippet of some sort?)
+ * @returns {(any|null)}
+ */
 function playlistItem(s) {
 	var li = document.createElement("li");
 	cls(li, "song", ADD);
@@ -615,9 +626,14 @@ function playlistItem(s) {
 	if (s.id == "last") {
 		li.id = "last";
 	} else {
-		var nfo = getSongInfo(s.path);
-		li.innerHTML = nfo.title + ' <span class="artist">' + (nfo.artist ? "(" + nfo.artist + ")" : "") + "</span>";
-		li.title = getAlbumInfo(nfo) + (mode ? "" : "\n\n" + s_playlistdesc);
+		try {
+			/** @type {Object<string>} Object with artist, album and year as keys */
+			var nfo = getSongInfo(s.path);
+			li.innerHTML = nfo.title + ' <span class="artist">' + (nfo.artist ? "(" + nfo.artist + ")" : "") + "</span>";
+			li.title = getAlbumInfo(nfo) + (mode ? "" : "\n\n" + s_playlistdesc);
+		} catch (e) {
+			log("could not get song info; error was: " + e.message)
+		}
 	}
 	return li;
 }
@@ -724,7 +740,7 @@ function fillShare(path) {
  *  Probably a legacy function for escaping characters the old way.
  *
  *	@param {string} s String to be escaped
- *	@return {string} Escaped string
+ *	@returns {string} Escaped string
  *
  **/
 function esc(s) {
@@ -752,7 +768,7 @@ function escBase64(s) {
 /**
  * Retrieves the song info from a file.
  * @param {string} path - Path to music file
- * @return {Object<string>} Object with artist and album as keys
+ * @returns {Object<string>} Object with artist and album as keys
  */
 function getSongInfo(path) {
 	log("getSongInfo: " + path);
@@ -760,6 +776,7 @@ function getSongInfo(path) {
 
 	for (var i = pathexp.length - 1; i > -1; i--) {
 		try {
+			/** @type {Object<string>} Object with artist, album and year as keys */
 			var nfo = path.match(pathexp[i]);
 //			log(nfo.groups);
 			log("nfo: " + nfo + "groups: " + nfo.groups);
@@ -787,7 +804,7 @@ function getSongInfo(path) {
  * Retrieves the album info from a file.
  * It's the opposite of {@function getSongInfo}
  * @param {Object<string>} nfo - Object with artist, album and year as keys
- * @return {string} String
+ * @returns {string} Name of the album as string
  */
 function getAlbumInfo(nfo) {
 	var artist = nfo.artist ? nfo.artist : "";
@@ -797,6 +814,11 @@ function getAlbumInfo(nfo) {
 	return album;
 }
 
+/**
+ * For displaying the audio clip duration.
+ * @param {number} t - time in seconds
+ * @returns {string} Clock with time as HH:MM:SS
+ */
 function timeTxt(t) {
 	var h = ~~(t / 3600);
 	var m = ~~((t % 3600) / 60);
@@ -806,7 +828,7 @@ function timeTxt(t) {
 
 /**
  * Handle zoom
- * @return void
+ * @returns {void}
  */
 function zoom() {
 	if (window.pageYOffset > 2 * dom.player.offsetHeight) return window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1095,7 +1117,7 @@ function importPlaylist() {
 	var input = document.createElement("input");
 	input.setAttribute("type", "file");
 	input.setAttribute("accept", ".mfp.json");
-	input.onchange = function (e) {
+	input.onchange = function (_) {
 		var reader = new FileReader();
 		reader.onload = function (e) {
 			var pl = JSON.parse(e.target.result);
@@ -1193,6 +1215,7 @@ function playNext() {
 	if (!cfg.crossfade) stop();
 
 	track ^= 1;
+	/** @type {any} One audio track */
 	var a = audio[track];
 	cfg.index = a.index;
 	start(a);
@@ -1228,7 +1251,10 @@ function playNext() {
 		});
 	}
 }
-
+/**
+ * Starts playing a track, if possible
+ * @param {any} a - Track to play
+ */
 function start(a) {
 	a.prepped = false;
 	/*	if (!a.canplaythrough)
@@ -1335,7 +1361,11 @@ function password() {
 	if (!cfg.locked) cfg.password = pass;
 	return true;
 }
-
+/**
+ * Context-sensitive menu builder.
+ * It seems to change according to clicking, hovering, etc.
+ * @param {any} e - Type of context we're in
+ */
 function menu(e) {
 	if (e.type == "mouseleave" && touch) return;
 
@@ -1447,7 +1477,14 @@ function filter(instant = false) {
 	cls(dom.library, "unfold", ADD);
 	if (!instant) keyNav(null, "down");
 }
-
+/**
+ * Searches through the classlist, adding or removing elements
+ * depending on the action chosen
+ * @param {any} el - One element
+ * @param {any} name - Name of element to search
+ * @param {number} act - Action to take
+ * @returns {boolean} (optional) The result of the search
+ */
 function cls(el, name, act = null) {
 	var found = el.classList.contains(name);
 	if (act == null) return found;
@@ -1485,11 +1522,42 @@ function clearFilter() {
 
 /**
  * Toggle a message saying that the streamer is configured.
+ * Called by `onload()`
  */
 function onAir() {
-	if (push_to_streamer == true) {
+	var id = document.getElementById('on-air');
 
+	if (push_to_streamer == true) {
+		log("streamer configured and ready");
+		if (id.classList.contains('dim')) {
+			id.classList.remove('dim');
+		}
+	} else {
+		if (!id.classList.contains('dim')) {
+			id.classList.add('dim');
+		}
+		log("no streaming service found");
 	}
+}
+
+/**
+ * Stream the current music on the playlist, by sending a remote request
+ * to launch the encoder (usually ffmpeg) as a spawned process.
+ * TODO(gwyneth): Lots of security checking to avoid malicious code injection
+ *
+ * @param {string} curMusic - Path to the current music being played
+ */
+function streamCurrent(curMusic) {
+	var xhttp = new XMLHttpRequest();
+	xhttp.onload = function () {
+		if (this.responseText != "") {
+			alert(s_error + "\n\n" + this.responseText);
+			log(s_error + " - " + this.responseText);
+		}
+	};
+	xhttp.open("POST", "music.php?stream", true);
+	xhttp.setRequestHeader("Content-type", "application/json");
+	xhttp.send(JSON.stringify({ music: curMusic }));
 }
 
 function keyNav(el, direction) {
