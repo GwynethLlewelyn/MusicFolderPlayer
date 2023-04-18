@@ -936,3 +936,16 @@ button.whatsapp:before {
 #on-air.dim {
 	color: var(--bg);
 }
+.glow {
+	/* color: white; */
+	animation: glow 1.5s ease-in-out infinite alternate;
+}
+@keyframes glow {
+	from {
+		text-shadow: 0 0 4px white, 0 0 8px white, 0 0 6px var(--focus), 0 0 8px var(--focus),
+			0 0 10px var(--focus), 0 0 12px var(--focus), 0 0 14px var(--focus);
+	}
+	to {
+		text-shadow: 0 0 5px white, 0 0 8px var(--focus-dim), 0 0 11px var(--focus-dim), 0 0 14px var(--focus-dim), 0 0 17px var(--focus-dim), 0 0 20px var(--focus-dim), 0 0 23px var(--focus-dim);
+	}
+}
