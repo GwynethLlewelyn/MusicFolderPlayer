@@ -14,17 +14,17 @@ var /** @global */
 	cfg = {},
 	/** @global @type {{playlist: array, skip:array, index:number}} */
 	def = { playlist: [], skip: [], index: -1 },
-	/** @global */
+	/** @global @type {Object} local copy of the relevant parts of the DOM */
 	dom,
 	/** @global */
 	library,
 	/** @global Local Storage */
 	ls,
-	/** @global */
+	/** @global Regular expression to catch paths in the disk's library */
 	pathexp,
-	/** @global @type {array} */
+	/** @global @type {array} all songs available on the library */
 	songs = [],
-	/** @global @type {array} */
+	/** @global @type {array} UI themes */
 	themes = [],
 	/** @global @type {array} URL of the base HTML split by the `play` query (if present). */
 	url,
@@ -60,7 +60,7 @@ var /** @global */
 	track = 0,
 	/** @global */
 	tree,
-	/** @global I wish I knew what this is... */
+	/** @global I wish I knew what this is... a flag to check if we're on a TV perhaps? */
 	tv;
 
 /* Constants to pass to the classlist adder/remover */
@@ -144,6 +144,10 @@ function init() {
 	document.body.appendChild(lib);
 }
 
+/**
+ * Prepare all elements of the UI, based on current configuration
+ * as well as local storage.
+ */
 function prepUI() {
 	ls = ls();
 	dom.pagetitle.textContent = def.title;
@@ -340,6 +344,11 @@ function prepPlaylistMode() {
 	mode = "playlist";
 }
 
+/**
+ * Prepares (next) audio clip for playing.
+ * @param {number} id - Song ID to be prepped
+ * @returns {HTMLAudioElement} - the audio element that is now prepped
+ */
 function prepAudio(id) {
 	var a = new Audio();
 
@@ -365,6 +374,10 @@ function prepAudio(id) {
 			cls(dom.playlist.childNodes[cfg.index], "playing", ADD);
 			if (!onplaylist) dom.playlist.scrollTop = dom.playlist.childNodes[cfg.index > 0 ? cfg.index - 1 : cfg.index].offsetTop - dom.playlist.offsetTop;
 		}
+		if (push_to_streamer) {
+			cls(dom.onAir, "glow", ADD);
+			dom.onAir.textContent = s_streaming;
+		}
 	};
 
 	a.onplaying = function () {
@@ -378,10 +391,18 @@ function prepAudio(id) {
 			cls(dom.album, "dim", ADD);
 			cls(dom.title, "dim", ADD);
 		}
+		if (push_to_streamer) {
+			cls(dom.onAir, "glow", REM);
+			dom.onAir.textContent = s_streamerstandby;
+		}
 	};
 
 	a.onended = function () {
 		a.log("Ended");
+		if (push_to_streamer) {
+			cls(dom.onAir, "glow", REM);
+			dom.onAir.textContent = s_streamerstandby;
+		}
 		if (audio[track].ended)
 			// For crossfade/"gapless"
 			playNext();
@@ -1177,6 +1198,12 @@ function getPlaylistCopy() {
 	return JSON.stringify(pl);
 }
 
+/**
+ * Adds another song to the playlist and reconfigures its display.
+ * @param {number} id - song # to add (0 means empty list)
+ * @param {boolean} next - if this song is to be played after id (defaults to false)
+ * @returns {void}
+ */
 function add(id, next = false) {
 	var s = {
 		path: songs[id].path,
@@ -1216,9 +1243,6 @@ function add(id, next = false) {
 
 /**
  * Main function to start playing a song (either directly or from a playlist).
- *
- * @param {void}
- * @returns {void} returns void
  */
 function playNext() {
 	if (cfg.index != -1) {
@@ -1240,6 +1264,7 @@ function playNext() {
 	cfg.index = a.index;
 	start(a);
 
+		/** @type {string} Filepath to song to play next */
 	var path = cfg.playlist[cfg.index].path,
 		nfo = getSongInfo(path),
 		cover = cfg.playlist[cfg.index].cover,
@@ -1270,7 +1295,7 @@ function playNext() {
 			artwork: [{ src: cover }],
 		});
 	}
-	// send song to streamer, iff configured
+	// send song to streamer, iff streamer is configured
 	if (push_to_streamer !== 'undefined' && push_to_streamer == true) {
 		streamCurrent(path);
 	}

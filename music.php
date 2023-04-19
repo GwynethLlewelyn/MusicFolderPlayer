@@ -165,7 +165,7 @@ if (!isset($_GET["reload"])) {
 		echo (stristr($key, ".") ? "" : "var ") . $key . "=" . $value . ";" . PHP_EOL;
 	};
 	// for streamer INI config (gwyneth 20221208)
-/* 	foreach ($ini["streamer"] as $key => $value) {
+	/* 	foreach ($ini["streamer"] as $key => $value) {
 		echo (stristr($key, ".") ? "" : "var ") . $key . "=" . $value . ";" . PHP_EOL;
 	}; */
 	// We need only push_to_streamer:
@@ -285,6 +285,15 @@ function tree($dir, $depth)
 	}
 }
 
+/**
+ * Returns a ZIPped file of a playlist.
+ *
+ * @param  string        $name   Base filename of the ZIP file
+ * @param  string[]      $paths  Array of file paths to the songs
+ * @param  string|false  $pl     M3U playlist file on disk; false if it doesn't exist
+ *
+ * @return void
+ */
 function return_zip($name, $paths, $pl)
 {
 	$list_path = tempnam(sys_get_temp_dir(), "mfp_");
@@ -322,6 +331,7 @@ function return_zip($name, $paths, $pl)
 		error_log("zip error (" . $res . "): " . $err . PHP_EOL);
 		http_response_code(500);
 	}
+	// cleanup temporary files
 	if ($pl) {
 		unlink($pl);
 	}
