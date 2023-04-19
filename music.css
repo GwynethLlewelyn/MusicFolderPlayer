@@ -930,22 +930,27 @@ button.whatsapp:before {
 	content: "\f1a6";
 }
 /* Added by gwynethllewelyn (20221222) */
-#on-air {
+#onAir {
 	color: var(--focus);
+	cursor: none;
 }
-#on-air.dim {
+#onAir.dim {
 	color: var(--bg);
 }
 .glow {
-	/* color: white; */
+	color: lightblue !important;
 	animation: glow 1.5s ease-in-out infinite alternate;
 }
+/* note: variables are allegedly not allowed here
+ * var(--focus) replaced by cyan
+ * var(--focus-dim) replaced by lightcyan
+ */
 @keyframes glow {
 	from {
-		text-shadow: 0 0 4px white, 0 0 8px white, 0 0 6px var(--focus), 0 0 8px var(--focus),
-			0 0 10px var(--focus), 0 0 12px var(--focus), 0 0 14px var(--focus);
+		text-shadow: 0 0 4px white, 0 0 8px white, 0 0 6px cyan, 0 0 8px cyan,
+			0 0 10px cyan, 0 0 12px cyan, 0 0 14px cyan;
 	}
 	to {
-		text-shadow: 0 0 5px white, 0 0 8px var(--focus-dim), 0 0 11px var(--focus-dim), 0 0 14px var(--focus-dim), 0 0 17px var(--focus-dim), 0 0 20px var(--focus-dim), 0 0 23px var(--focus-dim);
+		text-shadow: 0 0 5px white, 0 0 8px lightcyan, 0 0 11px lightcyan, 0 0 14px lightcyan, 0 0 17px lightcyan, 0 0 20px lightcyan, 0 0 23px lightcyan;
 	}
 }
