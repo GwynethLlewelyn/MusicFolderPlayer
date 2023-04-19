@@ -16,6 +16,9 @@ $cfg = $ini["server"];
 $ext = explode(",", $cfg["ext_songs"] . "," . $cfg["ext_images"]);
 $img = explode(",", $cfg["ext_images"]);
 
+/** @var array|mixed Configuration parameters for the `[streamer]` section in the INI files. */
+$strcfg = $ini["streamer"];
+
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -98,20 +101,22 @@ if (isset($pl["name"])) {
 
 // handle request for streaming (gwyneth 20230416)
 if (isset($_GET["stream"])) {
-	if (!empty($cfg["streamer_command"]) && isset($pl["music"])) {
+	error_log("[DEBU] mfp: received request to stream music named <" . $pl["music"] . "> to streamer: <"
+		. (!empty($strcfg["streamer_command"]) ?: "---empty---") . ">\n", 4);
+	if (!empty($strcfg["streamer_command"]) && isset($pl["music"])) {
 		// POST body has a JSON with the song name (hopefully) (gwyneth 20230416)
 		$path = $cfg["root"] . "/" . $pl["music"];
 		if (!file_exists($path)) {
 			die("Song not found: " . $path . PHP_EOL);
 		}
-		$rawStreamerCommand = $cfg["streamer_command"];
+		$rawStreamerCommand = $strcfg["streamer_command"];
 		// Parse special variables inside the command.
 		// Use escapeshellcmd() on the replacements, just because who knows what users may
 		// creatively pass (deliberately or not!) to ffmpeg... (gwyneth 20230417)
-		$streamerCommand = str_replace("%filename%", escapeshellcmd($path), $rawStreamerCommand);
-		$streamerCommand = str_replace("%streaming_protocol%", escapeshellcmd($cfg["streaming_protocol"]), $streamerCommand);
-		$streamerCommand = str_replace("%streamer_url%", escapeshellcmd($cfg["streamer_url"]), $streamerCommand);
-		error_log("[INFO] mfp: launching streamer for <" . $streamerCommand . ">", 4);
+		$streamerCommand = str_replace("%filename%", escapeshellarg($path), $rawStreamerCommand);
+		$streamerCommand = str_replace("%streaming_protocol%", escapeshellarg($strcfg["streaming_protocol"]), $streamerCommand);
+		$streamerCommand = str_replace("%streamer_url%", escapeshellarg($strcfg["streamer_url"]), $streamerCommand);
+		error_log("[INFO] mfp: launching streamer for <" . $streamerCommand . ">\n", 4);
 		// `nohup` will launch ffmpeg in the background, so as not to interrupt the web server.
 		// stderr and stdout will get redirected to /dev/null
 		// `printf $!` will echo the PID of the spawned process (using `echo` seems to be problematic under
@@ -137,7 +142,7 @@ if (isset($_GET["stream"])) {
 			}
 			if ($pid < 0 || $resCode > 0) {
 				// something failed which we didn't manage to catch!
-				error_log(sprintf("[ERRO] mfp: spawning `ffmpeg`: unknown error, PID was %d, returning code was %d, last line of output was '%s'", $pid, ), 4);
+				error_log(sprintf("[ERRO] mfp: spawning `ffmpeg`: unknown error, PID was %d, returning code was %d, last line of output was '%s'", $pid, $resCode, $output), 4);
 				die("Confusing error; see server logs");
 			}
 		} catch (Exception $e) {
@@ -147,7 +152,8 @@ if (isset($_GET["stream"])) {
 		if ($output === FALSE) {
 			die("Spawning `ffmpeg` failed miserably; reason unknown!" . PHP_EOL);
 		}
-		die("Sending '" + $pl["music"] + "' to streamer");
+		// die("Sending '" . $pl["music"] . "' to streamer");
+		die();	// no message back, so that the JavaScript doesn't think this is an error! (gwyneth 20230418)
 	} else {
 		// no streamer configured, but nevertheless a command was sent to stream?
 		die("No streamer configured or music file not found");
@@ -158,10 +164,16 @@ if (!isset($_GET["reload"])) {
 	foreach ($ini["client"] as $key => $value) {
 		echo (stristr($key, ".") ? "" : "var ") . $key . "=" . $value . ";" . PHP_EOL;
 	};
-	// do the same for streamer INI config (gwyneth 20221208)
-	foreach ($ini["streamer"] as $key => $value) {
+	// for streamer INI config (gwyneth 20221208)
+/* 	foreach ($ini["streamer"] as $key => $value) {
 		echo (stristr($key, ".") ? "" : "var ") . $key . "=" . $value . ";" . PHP_EOL;
-	};
+	}; */
+	// We need only push_to_streamer:
+	if (!empty($ini["streamer"]["push_to_streamer"])) {
+		echo "var push_to_streamer=" . $ini["streamer"]["push_to_streamer"] . ";" . PHP_EOL;
+	} else {
+		echo "\/\/ Invalid or inexisting push_to_streamer" . PHP_EOL;
+	}
 }
 
 $dir = $cfg["root"];

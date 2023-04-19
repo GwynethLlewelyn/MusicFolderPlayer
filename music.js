@@ -63,10 +63,15 @@ var /** @global */
 	/** @global I wish I knew what this is... */
 	tv;
 
-/** @const */
-const ADD = 1,
+/* Constants to pass to the classlist adder/remover */
+const
+	/** @global @const {number} Add extra class to tag */
+	ADD = 1,
+	/** @global @const {number} Toggle value: what is below is to remove class, above is to add class*/
 	TOG = 0.1,
-	REM = 0,	// remove
+	/** @global @const {number} Remove class from tag */
+	REM = 0,
+	/** @global @const {number} Set class to tag */
 	SET = 2;
 
 /**
@@ -133,6 +138,8 @@ function init() {
 		if (songs.length == 1) prepSongMode();
 		if (autoplay > 1 || (autoplay && url[1])) playPause();
 		library = null;
+		// force it here, since it seems to be ignored on the HTML (gwyneth 20230417)
+		onAir();
 	};
 	document.body.appendChild(lib);
 }
@@ -149,7 +156,7 @@ function prepUI() {
 	if (cfg.locked) {
 		cls(document.body, "locked", ADD);
 		cls(dom.lock, "on", ADD);
-		dom.lock.textContent = "Unlock";
+		dom.lock.textContent = s_unlock;
 	}
 	if (url.length > 1 || !onlinepls) dom.hide(["playlistsdiv", "save", "shareplaylist"]);
 	if (!sharing) dom.hide("share");
@@ -273,6 +280,7 @@ function ls() {
 		var sav = localStorage.getItem(lsid);
 		if (sav != null) {
 			cfg = JSON.parse(sav) || {};
+			// collapses config values to defaults if not defined
 			for (var c in def) if (typeof cfg[c] === "undefined" || cfg[c] == null) cfg[c] = def[c];
 			return true;
 		}
@@ -284,10 +292,11 @@ function ls() {
 		return false;
 	} catch (e) {
 		log(e);
-		cfg = def;
+		cfg = def;	// if nothing could be retrieved from LocalStorage, then use default configs
 		return false;
 	}
 }
+
 /**
  * Internal logging system; if we have a valid console, also logs the message time.
  * @param {(string|any)} s Either a string (will get the time prepended) or an object,
@@ -312,6 +321,7 @@ function log(s, force = false) {
 		if (!touch) console.log(s);
 	}
 }
+
 /**
  * Saves the internal log to a file, opening a dialogue box.
  * @returns {void}
@@ -725,6 +735,10 @@ function getIndex(li) {
 	for (var i = 0; i < li.parentNode.children.length; i++) if (li == li.parentNode.children[i]) return i;
 }
 
+/**
+ * Adds additional data to the text to share on social media,
+ * @param {string} path - Full location path for th Mediafile
+ */
 function fillShare(path) {
 	if (!sharing) return;
 	if (path.endsWith("/")) {
@@ -844,12 +858,18 @@ function seek(e) {
 	}
 }
 
+/**
+ * Stops current track (if playing), resets timer, remove glow on the streaming label
+ */
 function stop() {
 	if (cfg.locked) return;
 	clearInterval(retry);
 	audio[track].pause();
 	audio[track].currentTime = 0;
 	dom.seek.disabled = 1;
+	// stop glow on the streaming label
+	cls(dom.onAir, 'glow', REM);
+	dom.onAir.textContent = s_streamerstandby;
 }
 
 function playPause() {
@@ -1250,6 +1270,10 @@ function playNext() {
 			artwork: [{ src: cover }],
 		});
 	}
+	// send song to streamer, iff configured
+	if (push_to_streamer !== 'undefined' && push_to_streamer == true) {
+		streamCurrent(path);
+	}
 }
 /**
  * Starts playing a track, if possible
@@ -1340,7 +1364,7 @@ function toggleLock() {
 	var act = cfg.locked ? ADD : REM;
 	cls(document.body, "locked", act);
 	cls(dom.lock, "on", act);
-	dom.lock.textContent = cfg.locked ? "Unlock" : "Lock";
+	dom.lock.textContent = cfg.locked ? s_unlock : s_lock;
 }
 
 function password() {
@@ -1478,11 +1502,11 @@ function filter(instant = false) {
 	if (!instant) keyNav(null, "down");
 }
 /**
- * Searches through the classlist, adding or removing elements
+ * Searches through the classlist, adding or removing CSS classes
  * depending on the action chosen
  * @param {any} el - One element
- * @param {any} name - Name of element to search
- * @param {number} act - Action to take
+ * @param {any} name - CSS class to check/add/remove
+ * @param {number} act - Action to take (ADD, REM, SET)
  * @returns {boolean} (optional) The result of the search
  */
 function cls(el, name, act = null) {
@@ -1525,18 +1549,17 @@ function clearFilter() {
  * Called by `onload()`
  */
 function onAir() {
-	var id = document.getElementById('on-air');
-
+	if (push_to_streamer === 'undefined' || push_to_streamer === 'null') {
+		log("invalid push_to_streamer; ignore if unnecessary");
+		// return;
+	}
 	if (push_to_streamer == true) {
 		log("streamer configured and ready");
-		if (id.classList.contains('dim')) {
-			id.classList.remove('dim');
-		}
+		cls(dom.onAir, 'dim', REM);	// using the original author's function for consistency! (gwyneth 20230419)
+		dom.onAir.textContent = s_streaming;
 	} else {
-		if (!id.classList.contains('dim')) {
-			id.classList.add('dim');
-		}
-		log("no streaming service found");
+		cls(dom.onAir, 'dim', ADD)
+		dom.onAir.textContent = "";
 	}
 }
 
@@ -1553,6 +1576,11 @@ function streamCurrent(curMusic) {
 		if (this.responseText != "") {
 			alert(s_error + "\n\n" + this.responseText);
 			log(s_error + " - " + this.responseText);
+		} else {
+			// play around with special effects!
+			cls(dom.onAir, 'glow', ADD);
+			dom.onAir.textContent = s_streaming;
+			log("[INFO] mfp: streamer responded with: " + this.responseText);
 		}
 	};
 	xhttp.open("POST", "music.php?stream", true);
@@ -1560,6 +1588,12 @@ function streamCurrent(curMusic) {
 	xhttp.send(JSON.stringify({ music: curMusic }));
 }
 
+/**
+ * Navigate the current playlist or the currently displayed menu using
+ * the keyboard.
+ * @param {string} el - DOM element name where keyboard-based navigation is enabled
+ * @param {string} direction - Direction of navigation (e.g. up, down, left, right...)
+ */
 function keyNav(el, direction) {
 	var to;
 
@@ -1628,7 +1662,9 @@ function keyNav(el, direction) {
 
 	setFocus(to);
 }
-
+/**
+ * Pick a theme/skin to apply to MFP.
+ */
 function changeTheme() {
 	if (!themes.length) return;
 	var prev = cfg.theme;
@@ -1642,6 +1678,9 @@ function changeTheme() {
 	}, 400);
 }
 
+/**
+ * Register all navigation keys with their associated callbacks.
+ */
 document.addEventListener(
 	"keydown",
 	function (e) {
